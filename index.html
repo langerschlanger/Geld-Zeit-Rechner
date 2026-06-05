@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Geld-Zeit-Rechner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .box {
+      background: white;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+      width: 380px;
+    }
+
+    h1 {
+      font-size: 24px;
+      text-align: center;
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    input, select {
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .preis-input {
+      flex: 2;
+      min-width: 0;
+    }
+
+    .preis-select {
+      flex: 1.4;
+      min-width: 0;
+    }
+
+    .zeit-input {
+      flex: 1.5;
+      min-width: 0;
+    }
+
+    .zeit-select {
+      flex: 1.2;
+      min-width: 0;
+    }
+
+    #betrag {
+      width: 100%;
+    }
+
+    .hint {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <h1>Geld-Zeit-Rechner</h1>
+
+    <label>Preis</label>
+    <div class="row">
+      <input class="preis-input" type="text" id="preis" value="30">
+      <select class="preis-select" id="einheit">
+        <option value="1">pro Sekunde</option>
+        <option value="60">pro Minute</option>
+        <option value="3600" selected>pro Stunde</option>
+        <option value="86400">pro Tag</option>
+        <option value="604800">pro Woche</option>
+        <option value="2592000">pro Monat</option>
+        <option value="31536000">pro Jahr</option>
+      </select>
+    </div>
+
+    <label>Zeit</label>
+    <div class="row">
+      <input class="zeit-input" type="text" id="zeit" placeholder="Zeit eingeben">
+
+      <select class="zeit-select" id="zeitEinheit">
+        <option value="1">Sekunden</option>
+        <option value="60">Minuten</option>
+        <option value="3600" selected>Stunden</option>
+        <option value="86400">Tage</option>
+        <option value="604800">Wochen</option>
+        <option value="2592000">Monate</option>
+        <option value="31536000">Jahre</option>
+      </select>
+    </div>
+
+    <label>Betrag</label>
+    <input type="text" id="betrag" placeholder="Betrag in € eingeben">
+
+    <div class="hint">
+      Du kannst entweder die Zeit oder den Betrag ändern.
+    </div>
+  </div>
+
+  <script>
+    const preisInput = document.getElementById("preis");
+    const einheitInput = document.getElementById("einheit");
+    const zeitInput = document.getElementById("zeit");
+    const zeitEinheitInput = document.getElementById("zeitEinheit");
+    const betragInput = document.getElementById("betrag");
+
+    let zuletztGeaendert = "zeit";
+
+    function textZuZahl(text) {
+      if (!text) return NaN;
+
+      return parseFloat(
+        text
+          .toString()
+          .replace(/\./g, "")
+          .replace(",", ".")
+      );
+    }
+
+    function zahlFormatieren(zahl, nachkommastellen = 2) {
+      if (isNaN(zahl)) return "";
+
+      return zahl.toLocaleString("de-DE", {
+        minimumFractionDigits: nachkommastellen,
+        maximumFractionDigits: nachkommastellen
+      });
+    }
+
+    function getPreisProSekunde() {
+      const preis = textZuZahl(preisInput.value) || 0;
+      const basisSekunden = parseFloat(einheitInput.value);
+      return preis / basisSekunden;
+    }
+
+    function berechneVonZeit() {
+      const preisProSekunde = getPreisProSekunde();
+      const zeit = textZuZahl(zeitInput.value);
+
+      if (isNaN(zeit)) {
+        betragInput.value = "";
+        return;
+      }
+
+      const sekunden = zeit * parseFloat(zeitEinheitInput.value);
+      const betrag = sekunden * preisProSekunde;
+
+      betragInput.value = zahlFormatieren(betrag, 2);
+    }
+
+    function berechneVonBetrag() {
+      const preisProSekunde = getPreisProSekunde();
+      const betrag = textZuZahl(betragInput.value);
+
+      if (isNaN(betrag) || preisProSekunde === 0) {
+        zeitInput.value = "";
+        return;
+      }
+
+      const sekunden = betrag / preisProSekunde;
+      const zeit = sekunden / parseFloat(zeitEinheitInput.value);
+
+      zeitInput.value = zahlFormatieren(zeit, 2);
+    }
+
+    function aktualisieren() {
+      if (zuletztGeaendert === "zeit") {
+        berechneVonZeit();
+      } else {
+        berechneVonBetrag();
+      }
+    }
+
+    zeitInput.addEventListener("input", () => {
+      zuletztGeaendert = "zeit";
+      berechneVonZeit();
+    });
+
+    betragInput.addEventListener("input", () => {
+      zuletztGeaendert = "betrag";
+      berechneVonBetrag();
+    });
+
+    preisInput.addEventListener("input", aktualisieren);
+    einheitInput.addEventListener("change", aktualisieren);
+    zeitEinheitInput.addEventListener("change", aktualisieren);
+
+    preisInput.addEventListener("blur", () => {
+      const wert = textZuZahl(preisInput.value);
+      if (!isNaN(wert)) preisInput.value = zahlFormatieren(wert, 2);
+    });
+
+    zeitInput.addEventListener("blur", () => {
+      const wert = textZuZahl(zeitInput.value);
+      if (!isNaN(wert)) zeitInput.value = zahlFormatieren(wert, 2);
+    });
+
+    betragInput.addEventListener("blur", () => {
+      const wert = textZuZahl(betragInput.value);
+      if (!isNaN(wert)) betragInput.value = zahlFormatieren(wert, 2);
+    });
+  </script>
+
+</body>
+</html>
